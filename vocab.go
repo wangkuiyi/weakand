@@ -6,17 +6,17 @@ type Vocab struct {
 }
 
 // Id is not thread-safe.
-func (v Vocab) Id(term string) int {
+func (v Vocab) Id(term string) TermId {
 	id, ok := v.TermIndex[term]
 	if !ok {
 		v.Terms = append(v.Terms, term)
 		id = len(v.Terms) - 1
 		v.TermIndex[term] = id
-		return id
+		return TermId(id)
 	}
-	return id
+	return TermId(id)
 }
 
-func (v Vocab) Term(id int) string {
-	return v.Terms[id]
+func (v Vocab) Term(id TermId) string {
+	return v.Terms[int(id)]
 }

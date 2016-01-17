@@ -1,6 +1,12 @@
 package weakand
 
-import "sort"
+import (
+	"bytes"
+	"crypto/md5"
+	"encoding/binary"
+	"fmt"
+	"sort"
+)
 
 type DocId uint64 // MD5 hash of document content.
 type TermId int   // depends on Vocab.
@@ -27,12 +33,13 @@ func BuildIndex(corpus chan []string, vocab *Vocab) (InvertedIndex, ForwardIndex
 	fwdIdx := make(map[DocId]Document)
 
 	for doc := range corpus {
+		did := DocumentId(doc)
+
 		d := Document{Terms: make(map[TermId]int)}
 		for _, term := range doc {
 			d.Terms[vocab.Id(term)]++
 		}
 
-		did := DocumentId(d)
 		fwdIdx[did] = d
 
 		for term, tf := range d.Terms {
@@ -45,6 +52,15 @@ func BuildIndex(corpus chan []string, vocab *Vocab) (InvertedIndex, ForwardIndex
 	}
 
 	return ivtIdx, fwdIdx
+}
+
+func DocumentId(terms []string) DocId {
+	var buf bytes.Buffer
+	for _, t := range terms {
+		fmt.Fprintf(&buf, "%s\t", t)
+	}
+	md5Bytes := md5.Sum(buf.Bytes())
+	return DocId(binary.BigEndian.Uint64(md5Bytes[:]))
 }
 
 type Frontier struct {
@@ -63,7 +79,7 @@ func newFrontier(query Document, ivtIdx InvertedIndex, fwdIdx ForwardIndex) *Fro
 		ivtIdx:     ivtIdx,
 		fwdIdx:     fwdIdx}
 
-	for term, tf := range query.Terms {
+	for term, _ := range query.Terms {
 		if _, ok := ivtIdx[term]; ok {
 			// NOTE: Initialziing Frontier.postings to 0 implies postings lists has minimal length 1.
 			f.postings = append(f.postings, 0)
@@ -117,6 +133,22 @@ func scan(f *Frontier, threshold func() float64, emit chan Posting) {
 	}
 }
 
+func (f *Frontier) findPivotTerm(threshold float64) int {
+	// TODO(y): Implement this.
+	return 0
+}
+
+// pickTerm returns a value in range [0, pivotTermIdx), or -1 for error.
+func (f *Frontier) pickTerm(pivotTermIdx int) int {
+	// TODO(y): Implement this.
+	return -1
+}
+
+func (f *Frontier) score(query Document, post Posting) float64 {
+	// TODO(y): Implement this
+	return 0.0
+}
+
 type ResultHeap []Result
 type Result struct {
 	Posting
@@ -140,7 +172,7 @@ func Retrieve(query Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex
 	}()
 
 	for post := range candidates {
-		results.Grow(Result{Posting: post, Score: Score(query, post)}, cap)
+		results.Grow(Result{Posting: post, Score: f.score(query, post)}, cap)
 	}
 
 	sort.Sort(&results)
