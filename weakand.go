@@ -149,12 +149,6 @@ func (f *Frontier) score(query Document, post Posting) float64 {
 	return 0.0
 }
 
-type ResultHeap []Result
-type Result struct {
-	Posting
-	Score float64
-}
-
 func Retrieve(query Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex) []Result {
 	var results ResultHeap
 	threshold := func() float64 {
@@ -177,16 +171,4 @@ func Retrieve(query Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex
 
 	sort.Sort(&results)
 	return results
-}
-
-func (r ResultHeap) Len() int            { return len(r) }
-func (r ResultHeap) Less(i, j int) bool  { return r[i].Score < r[j].Score } // TODO(y): Make sure it is a MIN-heap.
-func (r ResultHeap) Swap(i, j int)       { r[i], r[j] = r[j], r[i] }
-func (r *ResultHeap) Push(x interface{}) { *r = append(*r, x.(Result)) }
-func (r *ResultHeap) Pop() interface{}   { l := (*r)[len(*r)-1]; *r = (*r)[:len(*r)-1]; return l }
-
-func (r *ResultHeap) Grow(d Result, cap int) {
-	if len(*r) < cap {
-		(*r) = append(ResultHeap{d}, (*r)...) // TODO(y): Unit test it.
-	}
 }
