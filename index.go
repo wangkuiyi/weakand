@@ -18,9 +18,21 @@ type Posting struct {
 	TF int // The term frequency in Doc.
 }
 
-type ForwardIndex map[DocId]Document
+type ForwardIndex map[DocId]*Document
 type Document struct {
 	Terms map[TermId]int // map makes it fast to compute Σt∈q∩d U_t.
+	Len   int            // sum over Terms.
+}
+
+// If word exists in content but not in vocab, add it into vocab.
+func NewDocument(content []string, vocab *Vocab) *Document {
+	d := &Document{Terms: make(map[TermId]int)}
+
+	for _, term := range content {
+		d.Terms[vocab.Id(term)]++
+		d.Len++
+	}
+	return d
 }
 
 // In InvertedIndex, posting lists are sorted by asceding order DocId.
@@ -30,18 +42,12 @@ func (p PostingList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func BuildIndex(corpus chan []string, vocab *Vocab) (InvertedIndex, ForwardIndex) {
 	ivtIdx := make(map[TermId]PostingList)
-	fwdIdx := make(map[DocId]Document)
+	fwdIdx := make(map[DocId]*Document)
 
 	for doc := range corpus {
 		did := documentHash(doc)
-
-		d := Document{Terms: make(map[TermId]int)}
-		for _, term := range doc {
-			d.Terms[vocab.Id(term)]++
-		}
-
+		d := NewDocument(doc, vocab)
 		fwdIdx[did] = d
-
 		for term, tf := range d.Terms {
 			ivtIdx[term] = append(ivtIdx[term], Posting{DocId: did, TF: tf})
 		}

@@ -12,16 +12,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBuildIndex(t *testing.T) {
-	corpus := [][]string{
+var (
+	testingCorpus = [][]string{
 		{"apple", "pie"},
 		{"apple", "iphone"},
 		{"iphone", "jailbreak"}}
+)
 
+func TestBuildIndex(t *testing.T) {
 	ch := make(chan []string)
-
 	go func() {
-		for _, d := range corpus {
+		for _, d := range testingCorpus {
 			ch <- d
 		}
 		close(ch)
@@ -33,7 +34,7 @@ func TestBuildIndex(t *testing.T) {
 	assert := assert.New(t)
 	assert.Equal(4, len(v.Terms))
 	assert.Equal(4, len(v.TermIndex))
-	assert.Equal(len(corpus), len(fwdIdx))
+	assert.Equal(len(testingCorpus), len(fwdIdx))
 	assert.Equal(4, len(ivtIdx))
 	for i := range ivtIdx {
 		assert.True(sort.IsSorted(ivtIdx[i]))

@@ -10,7 +10,7 @@ type Frontier struct {
 	fwdIdx     ForwardIndex
 }
 
-func newFrontier(query Document, ivtIdx InvertedIndex, fwdIdx ForwardIndex) *Frontier {
+func newFrontier(query *Document, ivtIdx InvertedIndex, fwdIdx ForwardIndex) *Frontier {
 	f := &Frontier{
 		terms:      make([]TermId, 0, len(query.Terms)),
 		postings:   make([]int, 0, len(query.Terms)),
@@ -83,12 +83,26 @@ func (f *Frontier) pickTerm(pivotTermIdx int) int {
 	return -1
 }
 
-func (f *Frontier) score(query Document, post Posting) float64 {
-	// TODO(y): Implement this
-	return 0.0
+func (f *Frontier) score(query *Document, post Posting) float64 {
+	return jaccardCoefficient(query, f.fwdIdx[post.DocId])
 }
 
-func Retrieve(query Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex) []Result {
+func jaccardCoefficient(q, d *Document) float64 {
+	inters := 0
+	for t, f := range q.Terms {
+		inters += min(d.Terms[t], f)
+	}
+	return float64(inters) / float64(q.Len+d.Len-inters)
+}
+
+func min(a, b int) int {
+	if a <= b {
+		return a
+	}
+	return b
+}
+
+func Retrieve(query *Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex) []Result {
 	var results ResultHeap
 	threshold := func() float64 {
 		if len(results) <= 0 {

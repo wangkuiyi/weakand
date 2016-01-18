@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	testVocabContent = `
+	testingVocab = `
  apple
  pie
  iphone
@@ -17,7 +17,7 @@ const (
 )
 
 func TestVocab(t *testing.T) {
-	v := NewVocab(strings.NewReader(testVocabContent))
+	v := NewVocab(strings.NewReader(testingVocab))
 
 	assert := assert.New(t)
 	assert.Equal(4, len(v.Terms))
