@@ -7,14 +7,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVocab(t *testing.T) {
-	vocab := `
+const (
+	testVocabContent = `
  apple
  pie
  iphone
  jailbreak
 `
-	v := NewVocab(strings.NewReader(vocab))
+)
+
+func TestVocab(t *testing.T) {
+	v := NewVocab(strings.NewReader(testVocabContent))
 
 	assert := assert.New(t)
 	assert.Equal(4, len(v.Terms))

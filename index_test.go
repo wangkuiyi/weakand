@@ -5,8 +5,11 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildIndex(t *testing.T) {
@@ -24,7 +27,17 @@ func TestBuildIndex(t *testing.T) {
 		close(ch)
 	}()
 
-	// TODO(y): Finish this.
+	v := NewVocab(nil)
+	ivtIdx, fwdIdx := BuildIndex(ch, v)
+
+	assert := assert.New(t)
+	assert.Equal(4, len(v.Terms))
+	assert.Equal(4, len(v.TermIndex))
+	assert.Equal(len(corpus), len(fwdIdx))
+	assert.Equal(4, len(ivtIdx))
+	for i := range ivtIdx {
+		assert.True(sort.IsSorted(ivtIdx[i]))
+	}
 }
 
 func TestDocumentHashCollision(t *testing.T) {

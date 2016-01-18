@@ -12,24 +12,26 @@ type Vocab struct {
 	Terms     []string       // term-Id to term.
 }
 
+// If in is not nil, load terms from it and fill into the initialized Vocab.
 func NewVocab(in io.Reader) *Vocab {
 	v := &Vocab{
 		TermIndex: make(map[string]int),
 		Terms:     make([]string, 0),
 	}
 
-	scanner := bufio.NewScanner(in)
-	for scanner.Scan() {
-		fs := strings.Fields(scanner.Text())
-		// Assumes that each line has multiple fields, and the last one is the term.
-		if len(fs) > 0 {
-			v.Id(fs[len(fs)-1]) // Add fs[1] to v.
+	if in != nil {
+		scanner := bufio.NewScanner(in)
+		for scanner.Scan() {
+			fs := strings.Fields(scanner.Text())
+			// Assumes that each line has multiple fields, and the last one is the term.
+			if len(fs) > 0 {
+				v.Id(fs[len(fs)-1]) // Add fs[1] to v.
+			}
+		}
+		if e := scanner.Err(); e != nil {
+			log.Panicf("Parsing vocab error %v", e)
 		}
 	}
-	if e := scanner.Err(); e != nil {
-		log.Panicf("Parsing vocab error %v", e)
-	}
-
 	return v
 }
 
