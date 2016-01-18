@@ -105,7 +105,7 @@ func min(a, b int) int {
 func Retrieve(query *Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex) []Result {
 	var results ResultHeap
 	threshold := func() float64 {
-		if len(results) <= 0 {
+		if len(results) < cap {
 			return 0.0
 		}
 		return results[0].Score // TODO(y): Introduce factor F.
