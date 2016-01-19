@@ -1,28 +1,31 @@
 package weakand
 
-import "sort"
+import (
+	"os"
+	"sort"
+)
 
 // A special value indicating the end of posting list.
 const EndOfPostingList = DocId(^uint64(0))
 
 type Frontier struct {
-	terms      []TermId
-	postings   []int // indexing posting list of InvertedIndex[terms[i]].
-	currentDoc DocId
-	ivtIdx     InvertedIndex
-	fwdIdx     ForwardIndex
+	terms    []TermId
+	postings []int // indexing posting list of InvertedIndex[terms[i]].
+	cur      DocId
+	ivt      InvertedIndex
+	fwd      ForwardIndex
 }
 
-func newFrontier(query *Document, ivtIdx InvertedIndex, fwdIdx ForwardIndex) *Frontier {
+func newFrontier(query *Document, ivt InvertedIndex, fwd ForwardIndex) *Frontier {
 	f := &Frontier{
-		terms:      make([]TermId, 0, len(query.Terms)),
-		postings:   make([]int, 0, len(query.Terms)),
-		currentDoc: 0,
-		ivtIdx:     ivtIdx,
-		fwdIdx:     fwdIdx}
+		terms:    make([]TermId, 0, len(query.Terms)),
+		postings: make([]int, 0, len(query.Terms)),
+		cur:      0,
+		ivt:      ivt,
+		fwd:      fwd}
 
 	for term, _ := range query.Terms {
-		if _, ok := ivtIdx[term]; ok {
+		if _, ok := ivt[term]; ok {
 			// NOTE: Initialziing Frontier.postings to 0 implies postings lists has minimal length 1.
 			f.postings = append(f.postings, 0)
 			f.terms = append(f.terms, term)
@@ -45,33 +48,37 @@ func (f *Frontier) Swap(i, j int) {
 func (f *Frontier) docId(frontierIdx int) DocId {
 	term := f.terms[frontierIdx]
 	post := f.postings[frontierIdx]
-	plist := f.ivtIdx[term]
+	plist := f.ivt[term]
 	if post >= len(plist) {
 		return EndOfPostingList
 	}
 	return plist[post].DocId
 }
 
-func scan(f *Frontier, threshold func() float64, emit chan Posting) {
+func scan(f *Frontier, threshold func() float64, emit chan Posting, vocab *Vocab) {
 	for {
+		if vocab != nil {
+			PrettyPrint(os.Stdout, f.fwd, f.ivt, vocab, f.terms, f.postings, f.cur)
+		}
+
 		pivotTermIdx := f.findPivotTerm(threshold())
 		if pivotTermIdx < 0 {
 			return // No more docs
 		}
 
 		pivotDocIdx := f.postings[pivotTermIdx]
-		if pivotDocIdx >= len(f.ivtIdx[f.terms[pivotTermIdx]]) {
+		if pivotDocIdx >= len(f.ivt[f.terms[pivotTermIdx]]) {
 			return // No more docs
 		}
 
-		pivot := f.ivtIdx[f.terms[pivotTermIdx]][pivotDocIdx].DocId
-		if pivot < f.currentDoc {
+		pivot := f.ivt[f.terms[pivotTermIdx]][pivotDocIdx].DocId
+		if pivot < f.cur {
 			// pivot has been considerred, advance one of the preceeding terms.
 			f.postings[f.pickTerm(pivotTermIdx)]++
 		} else {
-			if p := f.ivtIdx[f.terms[0]][f.postings[0]]; p.DocId == pivot {
+			if p := f.ivt[f.terms[0]][f.postings[0]]; p.DocId == pivot {
 				// Success, all terms preceeding pTerm belong to the pivot.
-				f.currentDoc = pivot
+				f.cur = pivot
 				emit <- p
 				f.postings[0]++
 			} else {
@@ -96,7 +103,7 @@ func (f *Frontier) pickTerm(pivotTermIdx int) int {
 }
 
 func (f *Frontier) score(query *Document, post Posting) float64 {
-	return jaccardCoefficient(query, f.fwdIdx[post.DocId])
+	return jaccardCoefficient(query, f.fwd[post.DocId])
 }
 
 func jaccardCoefficient(q, d *Document) float64 {
@@ -114,7 +121,7 @@ func min(a, b int) int {
 	return b
 }
 
-func Retrieve(query *Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardIndex) []Result {
+func Retrieve(query *Document, cap int, ivt InvertedIndex, fwd ForwardIndex, vocab *Vocab) []Result {
 	var results ResultHeap
 	threshold := func() float64 {
 		if len(results) < cap {
@@ -123,10 +130,10 @@ func Retrieve(query *Document, cap int, ivtIdx InvertedIndex, fwdIdx ForwardInde
 		return results[0].Score // TODO(y): Introduce factor F.
 	}
 
-	f := newFrontier(query, ivtIdx, fwdIdx)
+	f := newFrontier(query, ivt, fwd)
 	candidates := make(chan Posting)
 	go func() {
-		scan(f, threshold, candidates)
+		scan(f, threshold, candidates, vocab)
 		close(candidates)
 	}()
 
