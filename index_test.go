@@ -19,7 +19,7 @@ var (
 		{"iphone", "jailbreak"}}
 )
 
-func TestBuildIndex(t *testing.T) {
+func testBuildIndex() (*Vocab, InvertedIndex, ForwardIndex) {
 	ch := make(chan []string)
 	go func() {
 		for _, d := range testingCorpus {
@@ -31,14 +31,32 @@ func TestBuildIndex(t *testing.T) {
 	v := NewVocab(nil)
 	ivtIdx, fwdIdx := BuildIndex(ch, v)
 
+	return v, ivtIdx, fwdIdx
+}
+
+func TestBuildIndex(t *testing.T) {
+	v, ivtIdx, fwdIdx := testBuildIndex()
+
 	assert := assert.New(t)
+
 	assert.Equal(4, len(v.Terms))
 	assert.Equal(4, len(v.TermIndex))
+
 	assert.Equal(len(testingCorpus), len(fwdIdx))
 	assert.Equal(4, len(ivtIdx))
+
 	for i := range ivtIdx {
 		assert.True(sort.IsSorted(ivtIdx[i]))
 	}
+
+	assert.Equal(2, len(ivtIdx[v.Id("apple")]))
+	assert.Equal(1, len(ivtIdx[v.Id("pie")]))
+	assert.Equal(2, len(ivtIdx[v.Id("iphone")]))
+	assert.Equal(1, len(ivtIdx[v.Id("jailbreak")]))
+
+	assert.Equal(2, fwdIdx[documentHash(testingCorpus[0])].Len)
+	assert.Equal(2, fwdIdx[documentHash(testingCorpus[1])].Len)
+	assert.Equal(2, fwdIdx[documentHash(testingCorpus[2])].Len)
 }
 
 func TestDocumentHashCollision(t *testing.T) {

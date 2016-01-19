@@ -2,6 +2,9 @@ package weakand
 
 import "sort"
 
+// A special value indicating the end of posting list.
+const EndOfPostingList = DocId(^uint64(0))
+
 type Frontier struct {
 	terms      []TermId
 	postings   []int // indexing posting list of InvertedIndex[terms[i]].
@@ -32,13 +35,21 @@ func newFrontier(query *Document, ivtIdx InvertedIndex, fwdIdx ForwardIndex) *Fr
 // sort.Sort(f) sorts f.terms and f.postrings.
 func (f *Frontier) Len() int { return len(f.postings) }
 func (f *Frontier) Less(i, j int) bool {
-	di := f.ivtIdx[f.terms[i]][f.postings[i]].DocId
-	dj := f.ivtIdx[f.terms[j]][f.postings[j]].DocId
-	return di < dj
+	return f.docId(i) < f.docId(j)
 }
 func (f *Frontier) Swap(i, j int) {
 	f.terms[i], f.terms[j] = f.terms[j], f.terms[i]
 	f.postings[i], f.postings[j] = f.postings[j], f.postings[i]
+}
+
+func (f *Frontier) docId(frontierIdx int) DocId {
+	term := f.terms[frontierIdx]
+	post := f.postings[frontierIdx]
+	plist := f.ivtIdx[term]
+	if post >= len(plist) {
+		return EndOfPostingList
+	}
+	return plist[post].DocId
 }
 
 func scan(f *Frontier, threshold func() float64, emit chan Posting) {
@@ -62,6 +73,7 @@ func scan(f *Frontier, threshold func() float64, emit chan Posting) {
 				// Success, all terms preceeding pTerm belong to the pivot.
 				f.currentDoc = pivot
 				emit <- p
+				f.postings[0]++
 			} else {
 				// Not enough mass yet on pivot, advance one of the preceeding terms.
 				f.postings[f.pickTerm(pivotTermIdx)]++
