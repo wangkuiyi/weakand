@@ -1,6 +1,7 @@
 package weakand
 
 import (
+	"bytes"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -13,7 +14,7 @@ import (
 // Print the forwar and inverted index using vocab.  terms, postings
 // and currentDoc are supposed fields from type Frontier.  If they are
 // not nil, also shows the fronteir on the plot of index.
-func PrettyPrint(table Table, idx *SearchIndex, terms []TermId, postings []int, currentDoc DocId) {
+func (idx *SearchIndex) Pretty(table Table, terms []TermId, postings []int, currentDoc DocId) {
 	// Convert terms and postings into a map TermdId->DocId
 	termDoc := make(map[TermId]DocId)
 	for i, t := range terms {
@@ -126,4 +127,15 @@ func (c *csvTable) SetFooter(footer []string) {
 }
 func (c *csvTable) Done() {
 	c.Writer.Flush()
+}
+
+func (d *Document) Pretty(vocab *Vocab) string {
+	var buf bytes.Buffer
+	for t, n := range d.Terms {
+		if n > 1 {
+			fmt.Fprintf(&buf, "%dx", n)
+		}
+		fmt.Fprintf(&buf, "%s ", vocab.Term(t))
+	}
+	return buf.String()
 }

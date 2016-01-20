@@ -60,7 +60,7 @@ func (f *Frontier) docId(frontierIdx int) DocId {
 func scan(f *Frontier, threshold func() float64, emit chan *Posting, vocab *Vocab, debug bool) {
 	for {
 		if debug {
-			PrettyPrint(NewPlotTable(os.Stdout), f.SearchIndex, f.terms, f.postings, f.cur)
+			f.SearchIndex.Pretty(NewPlotTable(os.Stdout), f.terms, f.postings, f.cur)
 		}
 
 		pivotTermIdx := f.findPivotTerm(threshold())

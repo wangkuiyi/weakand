@@ -114,14 +114,3 @@ func documentHash(terms []string) DocId {
 	md5Bytes := md5.Sum(buf.Bytes())
 	return DocId(binary.BigEndian.Uint64(md5Bytes[:]))
 }
-
-func (d *Document) Pretty(vocab *Vocab) string {
-	var buf bytes.Buffer
-	for t, n := range d.Terms {
-		if n > 1 {
-			fmt.Fprintf(&buf, "%dx", n)
-		}
-		fmt.Fprintf(&buf, "%s ", vocab.Term(t))
-	}
-	return buf.String()
-}

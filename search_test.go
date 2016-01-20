@@ -77,9 +77,9 @@ func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpF
 	idx := NewIndex(NewVocab(nil)).BatchAdd(ch)
 
 	if len(indexDumpDir) > 0 {
-		PrettyPrint(
+		idx.Pretty(
 			NewCSVTable(createOrDie(path.Join(indexDumpDir, indexDumpFile))),
-			idx, nil, nil, 0)
+			nil, nil, 0)
 	}
 
 	q := NewQuery(query, idx.Vocab)
