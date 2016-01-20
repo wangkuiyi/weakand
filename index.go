@@ -30,13 +30,24 @@ type SearchIndex struct {
 	Vocab *Vocab
 }
 
-// If word exists in content but not in vocab, add it into vocab.
+// If a word in content is not in vocab, add it into vocab.
 func NewDocument(content []string, vocab *Vocab) *Document {
 	d := &Document{Terms: make(map[TermId]int)}
-
 	for _, term := range content {
-		d.Terms[vocab.Id(term)]++
+		d.Terms[vocab.IdOrAdd(term)]++
 		d.Len++
+	}
+	return d
+}
+
+// If words in content are not in vocab, don't add them into vocab or document.
+func NewQuery(content []string, vocab *Vocab) *Document {
+	d := &Document{Terms: make(map[TermId]int)}
+	for _, term := range content {
+		if id, ok := vocab.TermIndex[term]; ok {
+			d.Terms[TermId(id)]++
+			d.Len++
+		}
 	}
 	return d
 }

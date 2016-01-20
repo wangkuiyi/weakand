@@ -25,7 +25,7 @@ func NewVocab(in io.Reader) *Vocab {
 			fs := strings.Fields(scanner.Text())
 			// Assumes that each line has multiple fields, and the last one is the term.
 			if len(fs) > 0 {
-				v.Id(fs[len(fs)-1]) // Add fs[1] to v.
+				v.IdOrAdd(fs[len(fs)-1])
 			}
 		}
 		if e := scanner.Err(); e != nil {
@@ -35,8 +35,13 @@ func NewVocab(in io.Reader) *Vocab {
 	return v
 }
 
-// Id returns TermId of a term.  If the term is not in v, add it.  Id is not thread-safe.
-func (v *Vocab) Id(term string) TermId {
+// IdOrAdd returns TermId of a term.  It adds the term into v, if it
+// is not already in.  This mutation makes IdOrAdd not thread-safe.
+// Since IdOrAdd is called by NewDocument, which is in turn called by
+// SearchIndex.add, the index building process is not thread-safe.
+//
+// TODO(y): Make SearchIndex.Add/AddBatch thread-safe.
+func (v *Vocab) IdOrAdd(term string) TermId {
 	id, ok := v.TermIndex[term]
 	if !ok {
 		v.Terms = append(v.Terms, term)

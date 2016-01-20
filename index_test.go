@@ -45,10 +45,10 @@ func TestBuildIndex(t *testing.T) {
 		assert.True(sort.IsSorted(idx.Ivt[i]))
 	}
 
-	assert.Equal(2, len(idx.Ivt[idx.Vocab.Id("apple")]))
-	assert.Equal(1, len(idx.Ivt[idx.Vocab.Id("pie")]))
-	assert.Equal(2, len(idx.Ivt[idx.Vocab.Id("iphone")]))
-	assert.Equal(1, len(idx.Ivt[idx.Vocab.Id("jailbreak")]))
+	assert.Equal(2, len(idx.Ivt[idx.Vocab.IdOrAdd("apple")]))
+	assert.Equal(1, len(idx.Ivt[idx.Vocab.IdOrAdd("pie")]))
+	assert.Equal(2, len(idx.Ivt[idx.Vocab.IdOrAdd("iphone")]))
+	assert.Equal(1, len(idx.Ivt[idx.Vocab.IdOrAdd("jailbreak")]))
 
 	assert.Equal(2, idx.Fwd[documentHash(testingCorpus[0])].Len)
 	assert.Equal(2, idx.Fwd[documentHash(testingCorpus[1])].Len)

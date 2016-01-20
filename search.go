@@ -16,6 +16,10 @@ type Frontier struct {
 }
 
 func newFrontier(query *Document, idx *SearchIndex) *Frontier {
+	if query.Len <= 0 {
+		return nil
+	}
+
 	f := &Frontier{
 		SearchIndex: idx,
 		terms:       make([]TermId, 0, len(query.Terms)),
@@ -129,6 +133,10 @@ func Search(query *Document, cap int, idx *SearchIndex, debug bool) []Result {
 	}
 
 	f := newFrontier(query, idx)
+	if f == nil {
+		return nil // empty query leads to empty result.
+	}
+
 	candidates := make(chan *Posting)
 	go func() {
 		scan(f, threshold, candidates, idx.Vocab, debug)
