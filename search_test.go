@@ -13,9 +13,9 @@ import (
 )
 
 func TestSearch(t *testing.T) {
-	v, ivt, fwd := testBuildIndex()
-	q := NewDocument(v.Terms, v)                 // query includes all terms.
-	rs := Search(q, 10, ivt, fwd, v)             // NOTE: change v to nil to disable debug output.
+	idx := testBuildIndex()
+	q := NewDocument(idx.Vocab.Terms, idx.Vocab) // query includes all terms.
+	rs := Search(q, 10, idx, true)               // Pretty print intermediate steps.
 	assert.Equal(t, len(testingCorpus), len(rs)) // All documents should be retrieved.
 	for _, r := range rs {
 		assert.Equal(t, 0.5, r.s) // Jaccard coeffcient of all documents should be 1/2.
@@ -47,8 +47,7 @@ func TestSearchAAAI14Data(t *testing.T) {
 		close(ch)
 	}()
 
-	vocab := NewVocab(nil)
-	ivt, fwd := BuildIndex(ch, vocab)
+	idx := NewIndex(NewVocab(nil)).BatchAdd(ch)
 
 	// Note: to print the forward&inverted index into a CSV that
 	// can be loaded into Apple Numbers or Microsoft Excel, just
@@ -56,9 +55,9 @@ func TestSearchAAAI14Data(t *testing.T) {
 	//
 	// PrettyPrint(NewCSVTable(os.Stdout), fwd, ivt, vocab, nil, nil, 0)
 
-	q := NewDocument([]string{"incomplete", "ontologies"}, vocab)
-	for _, r := range Search(q, 10, ivt, fwd, nil) {
-		doc := fwd[r.p.DocId].Pretty(vocab)
+	q := NewDocument([]string{"incomplete", "ontologies"}, idx.Vocab)
+	for _, r := range Search(q, 10, idx, false) { // No pretty print intermediate steps.
+		doc := idx.Fwd[r.p.DocId].Pretty(idx.Vocab)
 		assert.True(t, strings.Contains(doc, "incomplete") || strings.Contains(doc, "ontologies"))
 	}
 }

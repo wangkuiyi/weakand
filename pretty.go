@@ -13,12 +13,12 @@ import (
 // Print the forwar and inverted index using vocab.  terms, postings
 // and currentDoc are supposed fields from type Frontier.  If they are
 // not nil, also shows the fronteir on the plot of index.
-func PrettyPrint(table Table, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab, terms []TermId, postings []int, currentDoc DocId) {
+func PrettyPrint(table Table, idx *SearchIndex, terms []TermId, postings []int, currentDoc DocId) {
 	// Convert terms and postings into a map TermdId->DocId
 	termDoc := make(map[TermId]DocId)
 	for i, t := range terms {
-		if postings[i] < len(ivt[t]) {
-			termDoc[t] = ivt[t][postings[i]].DocId
+		if postings[i] < len(idx.Ivt[t]) {
+			termDoc[t] = idx.Ivt[t][postings[i]].DocId
 		} else {
 			termDoc[t] = EndOfPostingList
 		}
@@ -26,8 +26,8 @@ func PrettyPrint(table Table, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab,
 
 	// Construct a posting list containing all documents, and use
 	// PostList's sortablility to sort them and get docId->index mapping.
-	ps := make(PostingList, 0, len(fwd))
-	for d, _ := range fwd {
+	ps := make(PostingList, 0, len(idx.Fwd))
+	for d, _ := range idx.Fwd {
 		ps = append(ps, Posting{DocId: d, TF: 0})
 	}
 	ps = append(ps, Posting{DocId: EndOfPostingList, TF: 0})
@@ -51,10 +51,10 @@ func PrettyPrint(table Table, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab,
 	}
 	table.SetHeader(row)
 
-	// NOTE: Do not range over ivt, which is a map and range is random.
-	for termId, term := range vocab.Terms {
-		pl := ivt[TermId(termId)]
-		row = make([]string, len(fwd))
+	// NOTE: Do not range over idx.Ivt, which is a map and range is random.
+	for termId, term := range idx.Vocab.Terms {
+		pl := idx.Ivt[TermId(termId)]
+		row = make([]string, len(idx.Fwd))
 		for _, p := range pl {
 			mark := "○"
 			if p.DocId == termDoc[TermId(termId)] {
@@ -65,9 +65,9 @@ func PrettyPrint(table Table, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab,
 		table.AddRow(append(append([]string{term}, row...), ""))
 	}
 
-	row = make([]string, len(fwd))
-	for d, c := range fwd {
-		row[docIdx[d]] = c.Pretty(vocab)
+	row = make([]string, len(idx.Fwd))
+	for d, c := range idx.Fwd {
+		row[docIdx[d]] = c.Pretty(idx.Vocab)
 	}
 	table.SetFooter(append(append([]string{" "}, row...), " "))
 
