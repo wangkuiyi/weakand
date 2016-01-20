@@ -41,23 +41,23 @@ func (p PostingList) Less(i, j int) bool { return p[i].DocId < p[j].DocId }
 func (p PostingList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 func BuildIndex(corpus chan []string, vocab *Vocab) (InvertedIndex, ForwardIndex) {
-	ivtIdx := make(map[TermId]PostingList)
-	fwdIdx := make(map[DocId]*Document)
+	ivt := make(map[TermId]PostingList)
+	fwd := make(map[DocId]*Document)
 
 	for doc := range corpus {
 		did := documentHash(doc)
 		d := NewDocument(doc, vocab)
-		fwdIdx[did] = d
+		fwd[did] = d
 		for term, tf := range d.Terms {
-			ivtIdx[term] = append(ivtIdx[term], Posting{DocId: did, TF: tf})
+			ivt[term] = append(ivt[term], Posting{DocId: did, TF: tf})
 		}
 	}
 
-	for _, ps := range ivtIdx {
+	for _, ps := range ivt {
 		sort.Sort(ps)
 	}
 
-	return ivtIdx, fwdIdx
+	return ivt, fwd
 }
 
 func documentHash(terms []string) DocId {
@@ -67,4 +67,15 @@ func documentHash(terms []string) DocId {
 	}
 	md5Bytes := md5.Sum(buf.Bytes())
 	return DocId(binary.BigEndian.Uint64(md5Bytes[:]))
+}
+
+func (d *Document) Pretty(vocab *Vocab) string {
+	var buf bytes.Buffer
+	for t, n := range d.Terms {
+		if n > 1 {
+			fmt.Fprintf(&buf, "%dx", n)
+		}
+		fmt.Fprintf(&buf, "%s ", vocab.Term(t))
+	}
+	return buf.String()
 }

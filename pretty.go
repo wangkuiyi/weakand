@@ -1,17 +1,19 @@
 package weakand
 
 import (
-	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"sort"
 
 	"github.com/olekukonko/tablewriter"
 )
 
-func PrettyPrint(w io.Writer, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab, terms []TermId, postings []int, currentDoc DocId) {
-	table := tablewriter.NewWriter(w)
-
+// Print the forwar and inverted index using vocab.  terms, postings
+// and currentDoc are supposed fields from type Frontier.  If they are
+// not nil, also shows the fronteir on the plot of index.
+func PrettyPrint(table Table, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab, terms []TermId, postings []int, currentDoc DocId) {
 	// Convert terms and postings into a map TermdId->DocId
 	termDoc := make(map[TermId]DocId)
 	for i, t := range terms {
@@ -60,21 +62,68 @@ func PrettyPrint(w io.Writer, fwd ForwardIndex, ivt InvertedIndex, vocab *Vocab,
 			}
 			row[docIdx[p.DocId]] = mark
 		}
-		table.Append(append(append([]string{term}, row...), ""))
+		table.AddRow(append(append([]string{term}, row...), ""))
 	}
 
 	row = make([]string, len(fwd))
 	for d, c := range fwd {
-		var buf bytes.Buffer
-		for t, n := range c.Terms {
-			if n > 1 {
-				fmt.Fprintf(&buf, "%dx", n)
-			}
-			fmt.Fprintf(&buf, "%s ", vocab.Term(t))
-		}
-		row[docIdx[d]] = buf.String()
+		row[docIdx[d]] = c.Pretty(vocab)
 	}
 	table.SetFooter(append(append([]string{" "}, row...), " "))
 
-	table.Render() // Send output
+	table.Done() // Send output
+}
+
+// Interface Table has two implementations: plotTable and csvTable
+type Table interface {
+	SetHeader([]string)
+	AddRow([]string)
+	SetFooter([]string)
+	Done()
+}
+
+func NewPlotTable(w io.Writer) Table {
+	return &plotTable{tablewriter.NewWriter(w)}
+}
+func NewCSVTable(w io.Writer) Table {
+	return &csvTable{csv.NewWriter(w)}
+}
+
+type plotTable struct {
+	*tablewriter.Table
+}
+
+func (t *plotTable) SetHeader(header []string) {
+	t.Table.SetHeader(header)
+}
+func (t *plotTable) AddRow(row []string) {
+	t.Table.Append(row)
+}
+func (t *plotTable) SetFooter(footer []string) {
+	t.Table.SetFooter(footer)
+}
+func (t *plotTable) Done() {
+	t.Table.Render()
+}
+
+type csvTable struct {
+	*csv.Writer
+}
+
+func (c *csvTable) write(row []string) {
+	if e := c.Writer.Write(row); e != nil {
+		log.Panic(e)
+	}
+}
+func (c *csvTable) SetHeader(header []string) {
+	c.write(header)
+}
+func (c *csvTable) AddRow(row []string) {
+	c.write(row)
+}
+func (c *csvTable) SetFooter(footer []string) {
+	c.write(footer)
+}
+func (c *csvTable) Done() {
+	c.Writer.Flush()
 }

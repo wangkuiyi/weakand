@@ -58,7 +58,7 @@ func (f *Frontier) docId(frontierIdx int) DocId {
 func scan(f *Frontier, threshold func() float64, emit chan *Posting, vocab *Vocab) {
 	for {
 		if vocab != nil {
-			PrettyPrint(os.Stdout, f.fwd, f.ivt, vocab, f.terms, f.postings, f.cur)
+			PrettyPrint(NewPlotTable(os.Stdout), f.fwd, f.ivt, vocab, f.terms, f.postings, f.cur)
 		}
 
 		pivotTermIdx := f.findPivotTerm(threshold())
@@ -121,7 +121,7 @@ func min(a, b int) int {
 	return b
 }
 
-func Retrieve(query *Document, cap int, ivt InvertedIndex, fwd ForwardIndex, vocab *Vocab) []Result {
+func Search(query *Document, cap int, ivt InvertedIndex, fwd ForwardIndex, vocab *Vocab) []Result {
 	results := NewResultHeap(cap)
 	threshold := func() float64 {
 		if results.Len() < cap {
