@@ -35,7 +35,7 @@ func newFrontier(query *Document, ivt InvertedIndex, fwd ForwardIndex) *Frontier
 	return f
 }
 
-// sort.Sort(f) sorts f.terms and f.postrings.
+// sort.Sort(f) sorts f.terms and f.postings.
 func (f *Frontier) Len() int { return len(f.postings) }
 func (f *Frontier) Less(i, j int) bool {
 	return f.docId(i) < f.docId(j)
