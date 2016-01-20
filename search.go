@@ -55,7 +55,7 @@ func (f *Frontier) docId(frontierIdx int) DocId {
 	return plist[post].DocId
 }
 
-func scan(f *Frontier, threshold func() float64, emit chan Posting, vocab *Vocab) {
+func scan(f *Frontier, threshold func() float64, emit chan *Posting, vocab *Vocab) {
 	for {
 		if vocab != nil {
 			PrettyPrint(os.Stdout, f.fwd, f.ivt, vocab, f.terms, f.postings, f.cur)
@@ -76,7 +76,7 @@ func scan(f *Frontier, threshold func() float64, emit chan Posting, vocab *Vocab
 			// pivot has been considerred, advance one of the preceeding terms.
 			f.postings[f.pickTerm(pivotTermIdx)]++
 		} else {
-			if p := f.ivt[f.terms[0]][f.postings[0]]; p.DocId == pivot {
+			if p := &f.ivt[f.terms[0]][f.postings[0]]; p.DocId == pivot {
 				// Success, all terms preceeding pTerm belong to the pivot.
 				f.cur = pivot
 				emit <- p
@@ -102,7 +102,7 @@ func (f *Frontier) pickTerm(pivotTermIdx int) int {
 	return -1
 }
 
-func (f *Frontier) score(query *Document, post Posting) float64 {
+func (f *Frontier) score(query *Document, post *Posting) float64 {
 	return jaccardCoefficient(query, f.fwd[post.DocId])
 }
 
@@ -122,16 +122,16 @@ func min(a, b int) int {
 }
 
 func Retrieve(query *Document, cap int, ivt InvertedIndex, fwd ForwardIndex, vocab *Vocab) []Result {
-	var results ResultHeap
+	results := NewResultHeap(cap)
 	threshold := func() float64 {
-		if len(results) < cap {
+		if results.Len() < cap {
 			return 0.0
 		}
-		return results[0].Score // TODO(y): Introduce factor F.
+		return results.rank[0].s // TODO(y): Introduce factor F.
 	}
 
 	f := newFrontier(query, ivt, fwd)
-	candidates := make(chan Posting)
+	candidates := make(chan *Posting)
 	go func() {
 		scan(f, threshold, candidates, vocab)
 		close(candidates)
@@ -139,10 +139,9 @@ func Retrieve(query *Document, cap int, ivt InvertedIndex, fwd ForwardIndex, voc
 
 	for post := range candidates {
 		results.Grow(Result{
-			Posting: post,
-			Score:   f.score(query, post)}, cap)
+			p: post,
+			s: f.score(query, post)})
 	}
 
-	results.Sort()
-	return results
+	return results.Sort()
 }

@@ -3,36 +3,71 @@ package weakand
 import "container/heap"
 
 // ResultHeap is a mean-heap with size cap.
-type ResultHeap []Result
+type ResultHeap struct {
+	rank  []Result
+	index map[DocId]int // DocId->index_in_rank, also help dedup.
+	cap   int
+}
+
 type Result struct {
-	Posting
-	Score float64
+	p *Posting
+	s float64
 }
 
-func (mh *ResultHeap) Len() int           { return len(*mh) }
-func (mh *ResultHeap) Less(i, j int) bool { return (*mh)[i].Score < (*mh)[j].Score } // TODO(y): Make sure it is a MIN-heap.
-func (mh *ResultHeap) Swap(i, j int)      { (*mh)[i], (*mh)[j] = (*mh)[j], (*mh)[i] }
-func (mh *ResultHeap) Push(x interface{}) { (*mh) = append(*mh, x.(Result)) }
-func (mh *ResultHeap) Pop() interface{}   { l := len(*mh); r := (*mh)[:l-1]; *mh = (*mh)[:l-1]; return r }
-
-func (mh *ResultHeap) Grow(x Result, cap int) {
-	if len(*mh) < cap {
-		mh.Push(x)
-		heap.Fix(mh, len(*mh)-1)
-	} else if (*mh)[0].Score < x.Score {
-		(*mh)[0] = x
-		heap.Fix(mh, 0)
+func NewResultHeap(cap int) *ResultHeap {
+	return &ResultHeap{
+		rank:  make([]Result, 0),
+		index: make(map[DocId]int),
+		cap:   cap,
 	}
 }
 
-// Sort() sorts mh in descending order of Result.Score, given that mh is in heapified status.
-func (mh *ResultHeap) Sort() []Result {
-	l := len(*mh)
-	for len(*mh) > 0 {
-		mh.Swap(0, len(*mh)-1)
-		mh.Pop()
-		heap.Fix(mh, 0)
+func (h *ResultHeap) Len() int           { return len(h.rank) }
+func (h *ResultHeap) Less(i, j int) bool { return h.rank[i].s < h.rank[j].s } // TODO(y): Make sure it is a MIN-heap.
+func (h *ResultHeap) Swap(i, j int)      { h.rank[i], h.rank[j] = h.rank[j], h.rank[i] }
+
+func (h *ResultHeap) Push(x interface{}) {
+	docId := x.(Result).p.DocId
+	if i, ok := h.index[docId]; ok {
+		h.rank[i] = x.(Result)
+	} else {
+		h.rank = append(h.rank, x.(Result))
+		h.index[docId] = h.Len() - 1
 	}
-	(*mh) = (*mh)[0:l]
-	return []Result(*mh)
+}
+func (h *ResultHeap) Pop() interface{} {
+	l := h.Len()
+	r := h.rank[l-1]
+	h.rank = h.rank[:l-1]
+	delete(h.index, r.p.DocId)
+	return r
+}
+
+func (h *ResultHeap) Grow(x Result) {
+	docId := x.p.DocId
+	if i, ok := h.index[docId]; ok {
+		h.rank[i] = x
+	} else if h.Len() < h.cap {
+		h.Push(x)
+		heap.Fix(h, h.Len()-1)
+	} else if h.rank[0].s < x.s {
+		oldDocId := h.rank[0].p.DocId
+		h.rank[0] = x
+		delete(h.index, oldDocId)
+		h.index[docId] = 0
+		heap.Fix(h, 0)
+	}
+}
+
+// Sort() sorts h in descending order of Result.Score, given that h is in heapified status.
+func (h *ResultHeap) Sort() []Result {
+	r := make([]Result, h.Len())
+	i := h.Len() - 1
+	for h.Len() > 0 {
+		h.Swap(0, h.Len()-1)
+		r[i] = h.Pop().(Result)
+		i--
+		heap.Fix(h, 0)
+	}
+	return r
 }

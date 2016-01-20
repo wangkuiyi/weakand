@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func shuffledFloat64Slice(size int) []float64 {
-	r := make([]float64, size)
+func shuffledSlice(size int) []int {
+	r := make([]int, size)
 	for i := range r {
-		r[i] = float64(i)
+		r[i] = i
 	}
 
 	for i := range r {
@@ -24,17 +24,16 @@ func shuffledFloat64Slice(size int) []float64 {
 func TestResultHeap(t *testing.T) {
 	assert := assert.New(t)
 
-	var mh ResultHeap
 	size := 10
+	mh := NewResultHeap(size)
 
-	sh := shuffledFloat64Slice(1024 * 1024)
-	for _, s := range sh {
-		mh.Grow(Result{Score: s}, size)
+	for _, s := range shuffledSlice(1024 * 1024) {
+		mh.Grow(Result{p: &Posting{DocId: DocId(s)}, s: float64(s)})
 	}
-	assert.Equal(size, len(mh))
+	assert.Equal(size, mh.Len())
 
 	mh.Sort()
-	for i := 0; i < len(mh); i++ {
-		assert.Equal(float64(1024*1024-i-1), mh[i].Score)
+	for i := 0; i < mh.Len(); i++ {
+		assert.Equal(float64(1024*1024-i-1), mh.rank[i].s)
 	}
 }
