@@ -3,7 +3,6 @@ package weakand
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path"
@@ -11,22 +10,20 @@ import (
 	"testing"
 	"unicode"
 
+	"github.com/huichen/sego"
 	"github.com/stretchr/testify/assert"
-	"github.com/wangkuiyi/sego"
 )
 
 var (
-	sgmt   sego.Segmenter
-	pretty bool
+	sgmt *sego.Segmenter
+
+	pretty       bool
+	indexDumpDir string
 )
 
 func init() {
-	if e := sgmt.LoadDictionary(path.Join(gosrc(),
-		"github.com/huichen/sego/data/dictionary.txt")); e != nil {
-		log.Panic(e)
-	}
-
 	flag.BoolVar(&pretty, "pretty", false, "Pretty print index and frontier when calling Search")
+	flag.StringVar(&indexDumpDir, "indexDir", "/tmp", "Directory containing index dumps")
 }
 
 func TestSearch(t *testing.T) {
@@ -42,20 +39,24 @@ func TestSearch(t *testing.T) {
 func TestSearchWithAAAI14Titles(t *testing.T) {
 	testWithBigData(t,
 		"github.com/wangkuiyi/weakand/testdata/aaai14papers.txt",
-		[]string{"incomplete", "ontologies"})
+		[]string{"incomplete", "ontologies"},
+		"aaai14titlesindex.csv")
 }
 
 func TestSearchWithZhWikiNews(t *testing.T) {
 	testWithBigData(t,
 		"github.com/wangkuiyi/weakand/testdata/zhwikinews.txt",
-		[]string{"中药", "商行"})
+		[]string{"中", "药商"},
+		"zhwikinewsindex.csv")
 }
 
-func testWithBigData(t *testing.T, corpusFile string, query []string) {
+func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpFile string) {
 	ch := make(chan []string)
 	go func() {
 		withFile(path.Join(gosrc(), corpusFile),
 			func(f *os.File) {
+				guaranteeSegmenter(&sgmt)
+
 				scanner := bufio.NewScanner(f)
 				for scanner.Scan() {
 					var terms []string
@@ -75,17 +76,21 @@ func testWithBigData(t *testing.T, corpusFile string, query []string) {
 
 	idx := NewIndex(NewVocab(nil)).BatchAdd(ch)
 
-	// Note: to print the forward&inverted index into a CSV that
-	// can be loaded into Apple Numbers or Microsoft Excel, just
-	// uncomment the following line:
-	//
-	// PrettyPrint(NewCSVTable(os.Stdout), fwd, ivt, vocab, nil, nil, 0)
+	if len(indexDumpDir) > 0 {
+		PrettyPrint(
+			NewCSVTable(createOrDie(path.Join(indexDumpDir, indexDumpFile))),
+			idx, nil, nil, 0)
+	}
 
 	q := NewQuery(query, idx.Vocab)
 	for _, r := range Search(q, 10, idx, pretty) { // No pretty print intermediate steps.
 		doc := idx.Fwd[r.p.DocId].Pretty(idx.Vocab)
-		fmt.Println(doc) //debug
-		assert.True(t, strings.Contains(doc, "incomplete") || strings.Contains(doc, "ontologies"))
+
+		contain := false
+		for _, qterm := range query {
+			contain = contain || strings.Contains(doc, qterm)
+		}
+		assert.True(t, contain)
 	}
 }
 
@@ -96,4 +101,24 @@ func allPunctOrSpace(s string) bool {
 		}
 	}
 	return true
+}
+
+func guaranteeSegmenter(sgmt **sego.Segmenter) error {
+	if *sgmt == nil {
+		s := new(sego.Segmenter)
+		if e := s.LoadDictionary(path.Join(gosrc(),
+			"github.com/huichen/sego/data/dictionary.txt")); e != nil {
+			return e
+		}
+		*sgmt = s
+	}
+	return nil
+}
+
+func createOrDie(file string) *os.File {
+	f, e := os.Create(file)
+	if e != nil {
+		log.Panic(e)
+	}
+	return f
 }
