@@ -1,11 +1,16 @@
 package weakand
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/md5"
 	"encoding/binary"
 	"fmt"
+	"log"
+	"os"
 	"sort"
+
+	"github.com/huichen/sego"
 )
 
 type DocId uint64 // MD5 hash of document content.
@@ -113,4 +118,29 @@ func documentHash(terms []string) DocId {
 	}
 	md5Bytes := md5.Sum(buf.Bytes())
 	return DocId(binary.BigEndian.Uint64(md5Bytes[:]))
+}
+
+func NewIndexFromFile(corpusFile string, sgmt *sego.Segmenter, dump string) *SearchIndex {
+	ch := make(chan []string)
+	go func() {
+		WithFile(corpusFile,
+			func(f *os.File) {
+				scanner := bufio.NewScanner(f)
+				for scanner.Scan() {
+					ch <- Tokenize(scanner.Text(), sgmt)
+				}
+				if e := scanner.Err(); e != nil {
+					log.Panicf("Scanning corpus error:%v", e)
+				}
+			})
+		close(ch)
+	}()
+
+	idx := NewIndex(NewVocab(nil)).BatchAdd(ch)
+
+	if len(dump) > 0 {
+		idx.Pretty(NewCSVTable(CreateOrDie(dump)), nil, nil, 0)
+	}
+
+	return idx
 }

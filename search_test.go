@@ -1,14 +1,10 @@
 package weakand
 
 import (
-	"bufio"
 	"flag"
-	"log"
-	"os"
 	"path"
 	"strings"
 	"testing"
-	"unicode"
 
 	"github.com/huichen/sego"
 	"github.com/stretchr/testify/assert"
@@ -51,39 +47,14 @@ func TestSearchWithZhWikiNews(t *testing.T) {
 }
 
 func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpFile string) {
-	ch := make(chan []string)
-	go func() {
-		withFile(path.Join(gosrc(), corpusFile),
-			func(f *os.File) {
-				guaranteeSegmenter(&sgmt)
-
-				scanner := bufio.NewScanner(f)
-				for scanner.Scan() {
-					var terms []string
-					for _, seg := range sgmt.Segment([]byte(scanner.Text())) {
-						if term := seg.Token().Text(); !allPunctOrSpace(term) {
-							terms = append(terms, term)
-						}
-					}
-					ch <- terms
-				}
-				if e := scanner.Err(); e != nil {
-					t.Skipf("Scanning corpus error:", e)
-				}
-			})
-		close(ch)
-	}()
-
-	idx := NewIndex(NewVocab(nil)).BatchAdd(ch)
-
-	if len(indexDumpDir) > 0 {
-		idx.Pretty(
-			NewCSVTable(createOrDie(path.Join(indexDumpDir, indexDumpFile))),
-			nil, nil, 0)
-	}
+	guaranteeSegmenter(&sgmt)
+	idx := NewIndexFromFile(
+		path.Join(gosrc(), corpusFile),
+		sgmt,
+		path.Join(indexDumpDir, indexDumpFile))
 
 	q := NewQuery(query, idx.Vocab)
-	for _, r := range Search(q, 10, idx, pretty) { // No pretty print intermediate steps.
+	for _, r := range Search(q, 10, idx, pretty) {
 		doc := idx.Fwd[r.p.DocId].Pretty(idx.Vocab)
 
 		contain := false
@@ -92,15 +63,6 @@ func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpF
 		}
 		assert.True(t, contain)
 	}
-}
-
-func allPunctOrSpace(s string) bool {
-	for _, u := range s {
-		if !unicode.IsPunct(u) && !unicode.IsSpace(u) {
-			return false
-		}
-	}
-	return true
 }
 
 func guaranteeSegmenter(sgmt **sego.Segmenter) error {
@@ -113,12 +75,4 @@ func guaranteeSegmenter(sgmt **sego.Segmenter) error {
 		*sgmt = s
 	}
 	return nil
-}
-
-func createOrDie(file string) *os.File {
-	f, e := os.Create(file)
-	if e != nil {
-		log.Panic(e)
-	}
-	return f
 }

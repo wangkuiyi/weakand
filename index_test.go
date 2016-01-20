@@ -2,7 +2,6 @@ package weakand
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"path"
 	"sort"
@@ -56,7 +55,7 @@ func TestBuildIndex(t *testing.T) {
 }
 
 func TestDocumentHashCollision(t *testing.T) {
-	withFile(path.Join(gosrc(), "github.com/wangkuiyi/weakand/testdata/internet-zh.num"),
+	WithFile(path.Join(gosrc(), "github.com/wangkuiyi/weakand/testdata/internet-zh.num"),
 		func(f *os.File) {
 			dict := make(map[DocId][][]string)
 			scanner := bufio.NewScanner(f)
@@ -79,18 +78,4 @@ func TestDocumentHashCollision(t *testing.T) {
 
 func gosrc() string {
 	return path.Join(os.Getenv("GOPATH"), "src")
-}
-
-func openOrDie(file string) *os.File {
-	f, e := os.Open(file)
-	if e != nil {
-		log.Panic(e)
-	}
-	return f
-}
-
-func withFile(file string, fn func(f *os.File)) {
-	f := openOrDie(file)
-	defer f.Close()
-	fn(f)
 }
