@@ -12,6 +12,7 @@ type ResultHeap struct {
 type Result struct {
 	Posting *Posting
 	Score   float64
+	Literal string // Only set when Result is to be returned by SearchIndex.Search.
 }
 
 func NewResultHeap(cap int) *ResultHeap {
@@ -61,13 +62,15 @@ func (h *ResultHeap) Grow(x Result) {
 
 // Sort() sorts h in descending order of Result.Score, given that h is in heapified status.
 func (h *ResultHeap) Sort() []Result {
-	r := make([]Result, h.Len())
+	rs := make([]Result, h.Len())
+
 	i := h.Len() - 1
 	for h.Len() > 0 {
 		h.Swap(0, h.Len()-1)
-		r[i] = h.Pop().(Result)
+		rs[i] = h.Pop().(Result)
 		i--
 		heap.Fix(h, 0)
 	}
-	return r
+
+	return rs
 }

@@ -149,5 +149,10 @@ func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
 			Score:   f.score(query, post)})
 	}
 
-	return results.Sort()
+	sorted := results.Sort()
+
+	for i, r := range sorted {
+		sorted[i].Literal = idx.Fwd[r.Posting.DocId].Literal
+	}
+	return sorted
 }

@@ -58,7 +58,7 @@ func testWithBigData(t *testing.T, corpusFile string, query string, indexDumpFil
 
 	q := NewQuery(query, idx.Vocab, sgmt)
 	for _, r := range idx.Search(q, 10, pretty) {
-		doc := strings.ToLower(idx.Fwd[r.Posting.DocId].Literal)
+		doc := strings.ToLower(r.Literal)
 
 		contain := false
 		for qterm := range q.Terms {
