@@ -13,39 +13,48 @@ import (
 var (
 	bend *rpc.Client
 
-	inputAndSubmit = `<html>
+	inputAndSubmit = `
+<html>
   <body>
-    <form action="/text">
-      <input type="text" name="query">
-      <input type="submit" value="Search">
+    <form action="/%s/">
+      <input type="text" name="text">
+      <input type="submit" value="OK">
     </form>
-  </body>
-</html>
 `
 )
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, inputAndSubmit)
+	log.Println("searchHandler", r.URL)
+
+	fmt.Fprintf(w, inputAndSubmit, "search")
 
 	if q := r.FormValue("text"); len(q) > 0 {
+		log.Printf("Search query=%s", q)
 		var rs []weakand.Result
 		if e := bend.Call("SearchServer.Search", q, &rs); e != nil {
 			http.Error(w, e.Error(), http.StatusInternalServerError)
 		}
 		for _, r := range rs {
-			fmt.Fprintf(w, "%s\n", r.Literal) // TODO(y): Print r.Score
+			fmt.Fprintf(w, "%s<br>\n", r.Literal) // TODO(y): Print r.Score
 		}
 	}
 }
 
 func addHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, inputAndSubmit)
+	log.Println("addHandler", r.URL)
+
+	fmt.Fprintf(w, inputAndSubmit, "add")
 
 	if q := r.FormValue("text"); len(q) > 0 {
+		log.Println("Add document: ", q)
 		if e := bend.Call("SearchServer.Add", q, nil); e != nil {
 			http.Error(w, e.Error(), http.StatusInternalServerError)
 		}
 	}
+}
+
+func redirectHandler(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/search", http.StatusFound)
 }
 
 func main() {
@@ -59,8 +68,9 @@ func main() {
 		log.Fatalf("Cannot dial backend RPC server: %v", e)
 	}
 
-	http.HandleFunc("/", searchHandler)
+	http.HandleFunc("/search/", searchHandler)
 	http.HandleFunc("/add/", addHandler)
+	http.HandleFunc("/", redirectHandler)
 
 	http.ListenAndServe(*addr, nil)
 }
