@@ -6,13 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/huichen/sego"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	sgmt *sego.Segmenter
-
 	pretty       bool
 	indexDumpDir string
 )
@@ -23,8 +20,13 @@ func init() {
 }
 
 func TestSearch(t *testing.T) {
+	guaranteeSegmenter(&sgmt)
+
 	idx := testBuildIndex()
-	q := NewQuery(idx.Vocab.Terms, idx.Vocab)    // query includes all terms.
+	q := NewQuery(
+		strings.Join(idx.Vocab.Terms, " "), // query includes all terms.
+		idx.Vocab,
+		sgmt)
 	rs := idx.Search(q, 10, pretty)              // Pretty print intermediate steps.
 	assert.Equal(t, len(testingCorpus), len(rs)) // All documents should be retrieved.
 	for _, r := range rs {
@@ -35,18 +37,18 @@ func TestSearch(t *testing.T) {
 func TestSearchWithAAAI14Titles(t *testing.T) {
 	testWithBigData(t,
 		"github.com/wangkuiyi/weakand/testdata/aaai14papers.txt",
-		[]string{"incomplete", "ontologies"},
+		"incomplete ontologies",
 		"aaai14titlesindex.csv")
 }
 
 func TestSearchWithZhWikiNews(t *testing.T) {
 	testWithBigData(t,
 		"github.com/wangkuiyi/weakand/testdata/zhwikinews.txt",
-		[]string{"中", "药商"},
+		"中药商",
 		"zhwikinewsindex.csv")
 }
 
-func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpFile string) {
+func testWithBigData(t *testing.T, corpusFile string, query string, indexDumpFile string) {
 	guaranteeSegmenter(&sgmt)
 
 	idx := NewIndexFromFile(
@@ -54,26 +56,14 @@ func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpF
 		sgmt,
 		path.Join(indexDumpDir, indexDumpFile))
 
-	q := NewQuery(query, idx.Vocab)
+	q := NewQuery(query, idx.Vocab, sgmt)
 	for _, r := range idx.Search(q, 10, pretty) {
-		doc := idx.Fwd[r.p.DocId].Pretty(idx.Vocab)
+		doc := strings.ToLower(idx.Fwd[r.p.DocId].Literal)
 
 		contain := false
-		for _, qterm := range query {
-			contain = contain || strings.Contains(doc, qterm)
+		for qterm := range q.Terms {
+			contain = contain || strings.Contains(doc, idx.Vocab.Term(qterm))
 		}
 		assert.True(t, contain)
 	}
-}
-
-func guaranteeSegmenter(sgmt **sego.Segmenter) error {
-	if *sgmt == nil {
-		s := new(sego.Segmenter)
-		if e := s.LoadDictionary(path.Join(gosrc(),
-			"github.com/huichen/sego/data/dictionary.txt")); e != nil {
-			return e
-		}
-		*sgmt = s
-	}
-	return nil
 }

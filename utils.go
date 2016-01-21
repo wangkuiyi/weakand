@@ -4,8 +4,6 @@ import (
 	"log"
 	"os"
 	"unicode"
-
-	"github.com/huichen/sego"
 )
 
 func OpenOrDie(file string) *os.File {
@@ -37,15 +35,4 @@ func AllPunctOrSpace(s string) bool {
 		}
 	}
 	return true
-}
-
-func Tokenize(doc string, sgmt *sego.Segmenter) []string {
-	var terms []string
-	for _, seg := range sgmt.Segment([]byte(doc)) {
-		term := seg.Token().Text()
-		if !AllPunctOrSpace(term) {
-			terms = append(terms, term)
-		}
-	}
-	return terms
 }

@@ -2,31 +2,37 @@ package weakand
 
 import (
 	"bufio"
+	"log"
 	"os"
 	"path"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/huichen/sego"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testingCorpus = [][]string{
-		{"apple", "pie"},
-		{"apple", "iphone"},
-		{"iphone", "jailbreak"}}
+	testingCorpus = []string{
+		"apple pie",
+		"apple iphone",
+		"iphone jailbreak"}
+
+	sgmt *sego.Segmenter
 )
 
 func testBuildIndex() *SearchIndex {
-	ch := make(chan []string)
+	guaranteeSegmenter(&sgmt)
+
+	ch := make(chan string)
 	go func() {
 		for _, d := range testingCorpus {
 			ch <- d
 		}
 		close(ch)
 	}()
-	return NewIndex(NewVocab(nil)).BatchAdd(ch)
+	return NewIndex(NewVocab(nil), sgmt).BatchAdd(ch)
 }
 
 func TestBuildIndex(t *testing.T) {
@@ -57,12 +63,12 @@ func TestBuildIndex(t *testing.T) {
 func TestDocumentHashCollision(t *testing.T) {
 	WithFile(path.Join(gosrc(), "github.com/wangkuiyi/weakand/testdata/internet-zh.num"),
 		func(f *os.File) {
-			dict := make(map[DocId][][]string)
+			dict := make(map[DocId][]string)
 			scanner := bufio.NewScanner(f)
 			for scanner.Scan() {
 				fs := strings.Fields(scanner.Text())
 				if len(fs) == 2 {
-					content := fs[1:]
+					content := fs[1]
 					did := documentHash(content)
 					if _, ok := dict[did]; ok {
 						t.Errorf("Collision between %v and %v", content, dict[did])
@@ -78,4 +84,15 @@ func TestDocumentHashCollision(t *testing.T) {
 
 func gosrc() string {
 	return path.Join(os.Getenv("GOPATH"), "src")
+}
+
+func guaranteeSegmenter(sgmt **sego.Segmenter) {
+	if *sgmt == nil {
+		s := new(sego.Segmenter)
+		if e := s.LoadDictionary(path.Join(gosrc(),
+			"github.com/huichen/sego/data/dictionary.txt")); e != nil {
+			log.Panic(e)
+		}
+		*sgmt = s
+	}
 }
