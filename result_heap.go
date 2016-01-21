@@ -10,8 +10,8 @@ type ResultHeap struct {
 }
 
 type Result struct {
-	p *Posting
-	s float64
+	Posting *Posting
+	Score   float64
 }
 
 func NewResultHeap(cap int) *ResultHeap {
@@ -23,11 +23,11 @@ func NewResultHeap(cap int) *ResultHeap {
 }
 
 func (h *ResultHeap) Len() int           { return len(h.rank) }
-func (h *ResultHeap) Less(i, j int) bool { return h.rank[i].s < h.rank[j].s } // TODO(y): Make sure it is a MIN-heap.
+func (h *ResultHeap) Less(i, j int) bool { return h.rank[i].Score < h.rank[j].Score } // TODO(y): Make sure it is a MIN-heap.
 func (h *ResultHeap) Swap(i, j int)      { h.rank[i], h.rank[j] = h.rank[j], h.rank[i] }
 
 func (h *ResultHeap) Push(x interface{}) {
-	docId := x.(Result).p.DocId
+	docId := x.(Result).Posting.DocId
 	if i, ok := h.index[docId]; ok {
 		h.rank[i] = x.(Result)
 	} else {
@@ -39,19 +39,19 @@ func (h *ResultHeap) Pop() interface{} {
 	l := h.Len()
 	r := h.rank[l-1]
 	h.rank = h.rank[:l-1]
-	delete(h.index, r.p.DocId)
+	delete(h.index, r.Posting.DocId)
 	return r
 }
 
 func (h *ResultHeap) Grow(x Result) {
-	docId := x.p.DocId
+	docId := x.Posting.DocId
 	if i, ok := h.index[docId]; ok {
 		h.rank[i] = x
 	} else if h.Len() < h.cap {
 		h.Push(x)
 		heap.Fix(h, h.Len()-1)
-	} else if h.rank[0].s < x.s {
-		oldDocId := h.rank[0].p.DocId
+	} else if h.rank[0].Score < x.Score {
+		oldDocId := h.rank[0].Posting.DocId
 		h.rank[0] = x
 		delete(h.index, oldDocId)
 		h.index[docId] = 0

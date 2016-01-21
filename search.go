@@ -129,7 +129,7 @@ func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
 		if results.Len() < cap {
 			return 0.0
 		}
-		return results.rank[0].s // TODO(y): Introduce factor F.
+		return results.rank[0].Score // TODO(y): Introduce factor F.
 	}
 
 	f := newFrontier(query, idx)
@@ -145,8 +145,8 @@ func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
 
 	for post := range candidates {
 		results.Grow(Result{
-			p: post,
-			s: f.score(query, post)})
+			Posting: post,
+			Score:   f.score(query, post)})
 	}
 
 	return results.Sort()

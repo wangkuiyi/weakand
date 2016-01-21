@@ -28,12 +28,14 @@ func TestResultHeap(t *testing.T) {
 	mh := NewResultHeap(size)
 
 	for _, s := range shuffledSlice(1024 * 1024) {
-		mh.Grow(Result{p: &Posting{DocId: DocId(s)}, s: float64(s)})
+		mh.Grow(Result{
+			Posting: &Posting{DocId: DocId(s)},
+			Score:   float64(s)})
 	}
 	assert.Equal(size, mh.Len())
 
 	mh.Sort()
 	for i := 0; i < mh.Len(); i++ {
-		assert.Equal(float64(1024*1024-i-1), mh.rank[i].s)
+		assert.Equal(float64(1024*1024-i-1), mh.rank[i].Score)
 	}
 }

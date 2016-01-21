@@ -30,7 +30,7 @@ func TestSearch(t *testing.T) {
 	rs := idx.Search(q, 10, pretty)              // Pretty print intermediate steps.
 	assert.Equal(t, len(testingCorpus), len(rs)) // All documents should be retrieved.
 	for _, r := range rs {
-		assert.Equal(t, 0.5, r.s) // Jaccard coeffcient of all documents should be 1/2.
+		assert.Equal(t, 0.5, r.Score) // Jaccard coeffcient of all documents should be 1/2.
 	}
 }
 
@@ -58,7 +58,7 @@ func testWithBigData(t *testing.T, corpusFile string, query string, indexDumpFil
 
 	q := NewQuery(query, idx.Vocab, sgmt)
 	for _, r := range idx.Search(q, 10, pretty) {
-		doc := strings.ToLower(idx.Fwd[r.p.DocId].Literal)
+		doc := strings.ToLower(idx.Fwd[r.Posting.DocId].Literal)
 
 		contain := false
 		for qterm := range q.Terms {
