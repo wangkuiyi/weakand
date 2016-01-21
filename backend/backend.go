@@ -32,7 +32,7 @@ func (s *SearchServer) Add(document string, _ *int) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.index.Add(weakand.Tokenize(document, s.sgmt))
+	s.index.Add(document)
 	return nil
 }
 
@@ -40,13 +40,7 @@ func (s *SearchServer) Search(query string, results *[]weakand.Result) error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 
-	*results = s.index.Search(
-		weakand.NewQuery(
-			weakand.Tokenize(query, s.sgmt),
-			s.index.Vocab),
-		50,    // cap
-		false) // no debug output
-
+	*results = s.index.Search(query, 50, false) // cap=50 and no debug output
 	return nil
 }
 
@@ -57,7 +51,9 @@ func main() {
 	flag.Parse()
 
 	if len(*sgmtDictFile) <= 0 {
-		*sgmtDictFile = path.Join(gosrc(), "github.com/huichen/sego/data/dictionary.txt")
+		*sgmtDictFile = path.Join(
+			os.Getenv("GOPATH"),
+			"src/github.com/huichen/sego/data/dictionary.txt")
 	}
 
 	rpc.Register(NewSearchServer(*corpusFile, *sgmtDictFile))
@@ -65,8 +61,4 @@ func main() {
 	if e := http.ListenAndServe(*addr, nil); e != nil {
 		log.Fatal(e)
 	}
-}
-
-func gosrc() string {
-	return path.Join(os.Getenv("GOPATH"), "src")
 }

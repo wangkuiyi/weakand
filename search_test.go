@@ -23,12 +23,8 @@ func TestSearch(t *testing.T) {
 	guaranteeSegmenter(&sgmt)
 
 	idx := testBuildIndex()
-	q := NewQuery(
-		strings.Join(idx.Vocab.Terms, " "), // query includes all terms.
-		idx.Vocab,
-		sgmt)
-	rs := idx.Search(q, 10, pretty)              // Pretty print intermediate steps.
-	assert.Equal(t, len(testingCorpus), len(rs)) // All documents should be retrieved.
+	rs := idx.Search(strings.Join(idx.Vocab.Terms, " "), 10, pretty) // Pretty print intermediate steps.
+	assert.Equal(t, len(testingCorpus), len(rs))                     // All documents should be retrieved.
 	for _, r := range rs {
 		assert.Equal(t, 0.5, r.Score) // Jaccard coeffcient of all documents should be 1/2.
 	}
@@ -57,7 +53,8 @@ func testWithBigData(t *testing.T, corpusFile string, query string, indexDumpFil
 		path.Join(indexDumpDir, indexDumpFile))
 
 	q := NewQuery(query, idx.Vocab, sgmt)
-	for _, r := range idx.Search(q, 10, pretty) {
+
+	for _, r := range idx.Search(query, 10, pretty) {
 		doc := strings.ToLower(r.Literal)
 
 		contain := false

@@ -3,6 +3,8 @@ package weakand
 import (
 	"os"
 	"sort"
+
+	"github.com/huichen/sego"
 )
 
 // A special value indicating the end of posting list.
@@ -13,6 +15,23 @@ type Frontier struct {
 	terms    []TermId
 	postings []int // indexing posting list of InvertedIndex[terms[i]].
 	cur      DocId
+}
+
+// If words in content are not in vocab, don't add them into vocab or
+// document.  This differs from NewDocument.
+func NewQuery(literal string, vocab *Vocab, sgmt *sego.Segmenter) *Document {
+	d := &Document{
+		Terms:   make(map[TermId]int),
+		Len:     0,
+		Literal: literal}
+
+	for _, term := range tokenize(literal, sgmt) {
+		if id, ok := vocab.TermIndex[term]; ok {
+			d.Terms[TermId(id)]++
+			d.Len++
+		}
+	}
+	return d
 }
 
 func newFrontier(query *Document, idx *SearchIndex) *Frontier {
@@ -123,7 +142,7 @@ func min(a, b int) int {
 	return b
 }
 
-func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
+func (idx *SearchIndex) Search(query string, cap int, debug bool) []Result {
 	results := NewResultHeap(cap)
 	threshold := func() float64 {
 		if results.Len() < cap {
@@ -132,7 +151,8 @@ func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
 		return results.rank[0].Score // TODO(y): Introduce factor F.
 	}
 
-	f := newFrontier(query, idx)
+	q := NewQuery(query, idx.Vocab, idx.Sgmt)
+	f := newFrontier(q, idx)
 	if f == nil {
 		return nil // empty query leads to empty result.
 	}
@@ -146,7 +166,7 @@ func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
 	for post := range candidates {
 		results.Grow(Result{
 			Posting: post,
-			Score:   f.score(query, post)})
+			Score:   f.score(q, post)})
 	}
 
 	sorted := results.Sort()

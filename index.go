@@ -49,22 +49,6 @@ func NewDocument(literal string, vocab *Vocab, sgmt *sego.Segmenter) *Document {
 	return d
 }
 
-// If words in content are not in vocab, don't add them into vocab or document.
-func NewQuery(literal string, vocab *Vocab, sgmt *sego.Segmenter) *Document {
-	d := &Document{
-		Terms:   make(map[TermId]int),
-		Len:     0,
-		Literal: literal}
-
-	for _, term := range tokenize(literal, sgmt) {
-		if id, ok := vocab.TermIndex[term]; ok {
-			d.Terms[TermId(id)]++
-			d.Len++
-		}
-	}
-	return d
-}
-
 // In InvertedIndex, posting lists are sorted by asceding order DocId.
 func (p PostingList) Len() int           { return len(p) }
 func (p PostingList) Less(i, j int) bool { return p[i].DocId < p[j].DocId }
