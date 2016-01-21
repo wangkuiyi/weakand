@@ -121,22 +121,26 @@ func documentHash(terms []string) DocId {
 }
 
 func NewIndexFromFile(corpusFile string, sgmt *sego.Segmenter, dump string) *SearchIndex {
-	ch := make(chan []string)
-	go func() {
-		WithFile(corpusFile,
-			func(f *os.File) {
-				scanner := bufio.NewScanner(f)
-				for scanner.Scan() {
-					ch <- Tokenize(scanner.Text(), sgmt)
-				}
-				if e := scanner.Err(); e != nil {
-					log.Panicf("Scanning corpus error:%v", e)
-				}
-			})
-		close(ch)
-	}()
+	idx := NewIndex(NewVocab(nil))
 
-	idx := NewIndex(NewVocab(nil)).BatchAdd(ch)
+	if len(corpusFile) > 0 {
+		ch := make(chan []string)
+		go func() {
+			WithFile(corpusFile,
+				func(f *os.File) {
+					scanner := bufio.NewScanner(f)
+					for scanner.Scan() {
+						ch <- Tokenize(scanner.Text(), sgmt)
+					}
+					if e := scanner.Err(); e != nil {
+						log.Panicf("Scanning corpus error:%v", e)
+					}
+				})
+			close(ch)
+		}()
+
+		idx.BatchAdd(ch)
+	}
 
 	if len(dump) > 0 {
 		idx.Pretty(NewCSVTable(CreateOrDie(dump)), nil, nil, 0)
