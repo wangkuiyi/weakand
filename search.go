@@ -123,7 +123,7 @@ func min(a, b int) int {
 	return b
 }
 
-func Search(query *Document, cap int, idx *SearchIndex, debug bool) []Result {
+func (idx *SearchIndex) Search(query *Document, cap int, debug bool) []Result {
 	results := NewResultHeap(cap)
 	threshold := func() float64 {
 		if results.Len() < cap {
