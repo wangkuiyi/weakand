@@ -47,7 +47,9 @@ func TestSearchWithZhWikiNews(t *testing.T) {
 }
 
 func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpFile string) {
-	guaranteeSegmenter(&sgmt)
+	GuaranteeSegmenter(&sgmt, path.Join(gosrc(),
+		"github.com/huichen/sego/data/dictionary.txt"))
+
 	idx := NewIndexFromFile(
 		path.Join(gosrc(), corpusFile),
 		sgmt,
@@ -63,16 +65,4 @@ func testWithBigData(t *testing.T, corpusFile string, query []string, indexDumpF
 		}
 		assert.True(t, contain)
 	}
-}
-
-func guaranteeSegmenter(sgmt **sego.Segmenter) error {
-	if *sgmt == nil {
-		s := new(sego.Segmenter)
-		if e := s.LoadDictionary(path.Join(gosrc(),
-			"github.com/huichen/sego/data/dictionary.txt")); e != nil {
-			return e
-		}
-		*sgmt = s
-	}
-	return nil
 }

@@ -49,3 +49,14 @@ func Tokenize(doc string, sgmt *sego.Segmenter) []string {
 	}
 	return terms
 }
+
+func GuaranteeSegmenter(sgmt **sego.Segmenter, dictFile string) error {
+	if *sgmt == nil {
+		s := new(sego.Segmenter)
+		if e := s.LoadDictionary(dictFile); e != nil {
+			return e
+		}
+		*sgmt = s
+	}
+	return nil
+}
