@@ -21,9 +21,8 @@ type SearchServer struct {
 
 func NewSearchServer(corpusFile, sgmtDictFile string) *SearchServer {
 	sgmt := new(sego.Segmenter)
-	if e := sgmt.LoadDictionary(sgmtDictFile); e != nil {
-		log.Panic(e)
-	}
+	sgmt.LoadDictionary(sgmtDictFile)
+
 	idx := weakand.NewIndexFromFile(corpusFile, sgmt, "") // no index dump
 	return &SearchServer{index: idx, sgmt: sgmt}
 }
