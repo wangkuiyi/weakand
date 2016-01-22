@@ -2,7 +2,6 @@ package weakand
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"path"
 	"sort"
@@ -89,10 +88,8 @@ func gosrc() string {
 func guaranteeSegmenter(sgmt **sego.Segmenter) {
 	if *sgmt == nil {
 		s := new(sego.Segmenter)
-		if e := s.LoadDictionary(path.Join(gosrc(),
-			"github.com/huichen/sego/data/dictionary.txt")); e != nil {
-			log.Panic(e)
-		}
+		s.LoadDictionary(path.Join(gosrc(),
+			"github.com/huichen/sego/data/dictionary.txt"))
 		*sgmt = s
 	}
 }
